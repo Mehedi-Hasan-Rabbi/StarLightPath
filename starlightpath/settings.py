@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-from pathlib import Path, include
+from pathlib import Path
 from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -42,8 +42,9 @@ INSTALLED_APPS = [
 
 THIRD_PARTY_APPS = [
     # Add third-party apps here
-    'rest_framework',       # Django Rest Framework
-    'drf_spectacular',      # DRF Documentation
+    'rest_framework',                                   # Django Rest Framework
+    'drf_spectacular',                                  # DRF Documentation
+    'rest_framework_simplejwt.token_blacklist',         # For logout functionality
 ]
 
 LOCAL_APPS = [
@@ -131,10 +132,11 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 
-AUTH_USER_MODEL = 'api.User'
+AUTH_USER_MODEL = 'user.Users'
 
 
 REST_FRAMEWORK = {
@@ -148,7 +150,7 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
