@@ -10,11 +10,16 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -162,3 +167,36 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+
+# Redis cache (use django-redis)
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",  # adjust host/port/db for your env
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # "PASSWORD": "your_redis_password",  # if needed
+        }
+    }
+}
+
+# Email (development)
+# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# For production set SMTP settings instead
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+
+# OTP settings
+PASSWORD_RESET_OTP_TTL = 10 * 60               # 10 minutes (Time-To-Live) limited lifespan of a one-time password
+PASSWORD_RESET_OTP_LENGTH = 5
+PASSWORD_RESET_MAX_REQUESTS_PER_HOUR = 20
+PASSWORD_RESET_MAX_VERIFY_ATTEMPTS = 5
+PASSWORD_RESET_RESEND_COOLDOWN = 60            # seconds
+# Use a secret pepper (set via environment variable in production)
+PASSWORD_RESET_OTP_PEPPER = "PASSWORD_RESET_OTP_PEPPER"

@@ -10,7 +10,9 @@ from .views import (
     AdminDeleteView,
     CurrentUserView,
     ChangePasswordView,
-    UpdateProfileView
+    UpdateProfileView,
+    ForgotPasswordView,
+    ResetPasswordView
 )
 
 app_name = 'user'
@@ -34,6 +36,9 @@ urlpatterns = [
     path('admins/<int:pk>/update/', AdminUpdateView.as_view(), name='admin-update'),
     path('admins/<int:pk>/delete/', AdminDeleteView.as_view(), name='admin-delete'),
 
+    # Forgot/Reset Password
+    path('password/forgot/', ForgotPasswordView.as_view(), name='password-forgot'),
+    path('password/reset/', ResetPasswordView.as_view(), name='password-reset'),
 
     # JWT auth paths
     # path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

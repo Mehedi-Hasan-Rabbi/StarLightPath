@@ -5,6 +5,9 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate, get_user_model
+from django.conf import settings
+from django.core.cache import cache
+from rest_framework.permissions import AllowAny
 
 from .serializers import (
     UserSerializer,
@@ -13,7 +16,14 @@ from .serializers import (
     AdminListSerializer,
     LoginSerializer,
     ChangePasswordSerializer,
-    UserProfileSerializer
+    UserProfileSerializer,
+    ForgotPasswordSerializer,
+    ResetPasswordSerializer
+)
+from .utils import (
+    generate_numeric_otp, can_request_otp, store_otp_for_email,
+    send_otp_email, verify_otp, increment_verify_attempts,
+    clear_otp_for_email, _otp_reqcount_key, _otp_attempts_key
 )
 from .permissions import IsSuperUser, IsAdminOrSuperUser
 
@@ -289,3 +299,77 @@ class UpdateProfileView(generics.UpdateAPIView):
             },
             status=status.HTTP_200_OK
         )
+    
+
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email'].lower()
+
+        # can_request_otp returns (allowed, reason, remaining_cd, remaining_reqs)
+        allowed, reason, retry_after, remaining_reqs = can_request_otp(email)
+        if not allowed:
+            return Response(
+                {"detail": reason, "retry_after": retry_after, "remaining_requests": remaining_reqs},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        otp = generate_numeric_otp()
+        store_otp_for_email(email, otp)
+
+        try:
+            if User.objects.filter(email__iexact=email).exists():
+                send_otp_email(email, otp)
+        except Exception:
+            # Do not reveal email/send errors to caller
+            pass
+
+        # Use the values returned by can_request_otp for frontend-friendly info
+        # If retry_after is None/0, fall back to the configured cooldown
+        cooldown = retry_after or getattr(settings, "PASSWORD_RESET_RESEND_COOLDOWN", 60)
+        remaining = remaining_reqs if remaining_reqs is not None else max(0, getattr(settings, "PASSWORD_RESET_MAX_REQUESTS_PER_HOUR", 5) - (cache.get(_otp_reqcount_key(email)) or 0))
+
+        return Response({
+            "detail": "If an account exists for that email, you will receive an OTP shortly.",
+            "retry_after": cooldown,
+            "remaining_requests": remaining
+        }, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email'].lower()
+        otp = serializer.validated_data['otp']
+        new_password = serializer.validated_data['new_password']
+
+        attempts = increment_verify_attempts(email)
+        max_attempts = getattr(settings, "PASSWORD_RESET_MAX_VERIFY_ATTEMPTS", 5)
+        if attempts > max_attempts:
+            clear_otp_for_email(email)
+            return Response({"detail": "Too many wrong OTP attempts. Request a new OTP."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        if not verify_otp(email, otp):
+            return Response({"detail": "Invalid OTP or expired."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            clear_otp_for_email(email)
+            return Response({"detail": "Password has been reset if the account exists."}, status=status.HTTP_200_OK)
+
+        user.set_password(new_password)
+        user.save()
+
+        clear_otp_for_email(email)
+
+        # Optional: blacklist outstanding refresh tokens to force re-login (advanced)
+        return Response({"detail": "Password reset successful. Please log in with your new password."},
+                        status=status.HTTP_200_OK)

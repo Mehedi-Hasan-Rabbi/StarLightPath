@@ -249,3 +249,20 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'is_normal_admin': obj.is_normal_admin,
             'is_super_admin': obj.is_super_admin
         }
+    
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=10)
+    new_password = serializers.CharField(write_only=True)
+    new_password_confirm = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['new_password_confirm']:
+            raise serializers.ValidationError({"new_password": "Passwords do not match."})
+        # validate password strength
+        validate_password(attrs['new_password'])
+        return attrs
