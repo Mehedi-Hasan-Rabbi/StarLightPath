@@ -18,12 +18,14 @@ from .serializers import (
     ChangePasswordSerializer,
     UserProfileSerializer,
     ForgotPasswordSerializer,
-    ResetPasswordSerializer
+    PasswordResetConfirmSerializer,
+    VerifyOTPSerializer
 )
 from .utils import (
     generate_numeric_otp, can_request_otp, store_otp_for_email,
     send_otp_email, verify_otp, increment_verify_attempts,
-    clear_otp_for_email, _otp_reqcount_key, _otp_attempts_key
+    clear_otp_for_email, _otp_reqcount_key, _otp_attempts_key,
+    set_verified_for_email, is_verified_for_email, clear_verified_for_email
 )
 from .permissions import IsSuperUser, IsAdminOrSuperUser
 
@@ -337,39 +339,75 @@ class ForgotPasswordView(APIView):
             "retry_after": cooldown,
             "remaining_requests": remaining
         }, status=status.HTTP_200_OK)
+    
 
-
-class ResetPasswordView(APIView):
+class VerifyOTPView(APIView):
+    """
+    Verify OTP only. If correct, set a short 'verified' flag in Redis.
+    Frontend should call this after user enters the OTP.
+    """
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = ResetPasswordSerializer(data=request.data)
+        serializer = VerifyOTPSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email'].lower()
         otp = serializer.validated_data['otp']
-        new_password = serializer.validated_data['new_password']
 
+        # increment and check attempts
         attempts = increment_verify_attempts(email)
         max_attempts = getattr(settings, "PASSWORD_RESET_MAX_VERIFY_ATTEMPTS", 5)
         if attempts > max_attempts:
             clear_otp_for_email(email)
+            clear_verified_for_email(email)
             return Response({"detail": "Too many wrong OTP attempts. Request a new OTP."},
                             status=status.HTTP_403_FORBIDDEN)
 
         if not verify_otp(email, otp):
             return Response({"detail": "Invalid OTP or expired."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # OTP is valid: mark verified and clear stored otp (prevent reuse)
+        set_verified_for_email(email)
+        clear_otp_for_email(email)  # optional: remove original OTP
+        return Response({"detail": "OTP verified. You may set a new password now."},
+                        status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(APIView):
+    """
+    Reset password after OTP verification.
+    Frontend must first call VerifyOTPView which sets a short-lived verified flag.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email'].lower()
+        new_password = serializer.validated_data['new_password']
+
+        # require the prior verification step
+        if not is_verified_for_email(email):
+            return Response(
+                {"detail": "OTP not verified or verification expired. Please verify OTP first."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             user = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
-            clear_otp_for_email(email)
+            # clear verified marker to avoid reuse; keep response generic
+            clear_verified_for_email(email)
             return Response({"detail": "Password has been reset if the account exists."}, status=status.HTTP_200_OK)
 
         user.set_password(new_password)
         user.save()
 
+        # clear verification and attempt keys
+        clear_verified_for_email(email)
         clear_otp_for_email(email)
 
-        # Optional: blacklist outstanding refresh tokens to force re-login (advanced)
+        # optional: blacklist outstanding tokens / force logout (advanced)
         return Response({"detail": "Password reset successful. Please log in with your new password."},
                         status=status.HTTP_200_OK)
+    

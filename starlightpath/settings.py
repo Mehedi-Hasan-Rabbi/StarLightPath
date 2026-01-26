@@ -193,10 +193,10 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
 # OTP settings
-PASSWORD_RESET_OTP_TTL = 10 * 60               # 10 minutes (Time-To-Live) limited lifespan of a one-time password
-PASSWORD_RESET_OTP_LENGTH = 5
-PASSWORD_RESET_MAX_REQUESTS_PER_HOUR = 20
-PASSWORD_RESET_MAX_VERIFY_ATTEMPTS = 5
-PASSWORD_RESET_RESEND_COOLDOWN = 60            # seconds
-# Use a secret pepper (set via environment variable in production)
-PASSWORD_RESET_OTP_PEPPER = "PASSWORD_RESET_OTP_PEPPER"
+PASSWORD_RESET_OTP_TTL = 10 * 60                            # (Time-To-Live) OTP is valid for 10 minutes
+PASSWORD_RESET_OTP_LENGTH = 5                               # OTP Length
+PASSWORD_RESET_MAX_REQUESTS_PER_HOUR = 5                    # Max OTP requests per user per hour
+PASSWORD_RESET_MAX_VERIFY_ATTEMPTS = 5                      # User can try verifying OTP only 5 times
+PASSWORD_RESET_RESEND_COOLDOWN = 60                         # User must wait 60 seconds before requesting another OTP.
+PASSWORD_RESET_VERIFIED_TTL = 10 * 60                       # After OTP is successfully verified, user has: 10 minutes to reset password
+PASSWORD_RESET_OTP_PEPPER = "PASSWORD_RESET_OTP_PEPPER"     # A secret server-side value added to OTP before hashing.

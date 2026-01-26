@@ -17,6 +17,27 @@ def _otp_reqcount_key(email: str) -> str:
 def _otp_cooldown_key(email: str) -> str:
     return f"pwd-reset:cooldown:{email.lower()}"
 
+def _otp_verified_key(email: str) -> str:
+    return f"pwd-reset:verified:{email.lower()}"
+
+def set_verified_for_email(email: str, ttl: int = None):
+    """
+    Mark this email as OTP-verified for a short TTL.
+    Frontend can now call reset within this window.
+    """
+    key = _otp_verified_key(email)
+    ttl = ttl or getattr(settings, "PASSWORD_RESET_VERIFIED_TTL", 600)
+    cache.set(key, 1, ttl)
+
+def is_verified_for_email(email: str) -> bool:
+    """
+    Return True if the email has been recently verified.
+    """
+    return bool(cache.get(_otp_verified_key(email)))
+
+def clear_verified_for_email(email: str):
+    cache.delete(_otp_verified_key(email))
+
 def generate_numeric_otp(length: int = None) -> str:
     length = length or getattr(settings, "PASSWORD_RESET_OTP_LENGTH", 6)
     max_val = 10 ** length

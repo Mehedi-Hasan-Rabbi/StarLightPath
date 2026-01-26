@@ -12,7 +12,8 @@ from .views import (
     ChangePasswordView,
     UpdateProfileView,
     ForgotPasswordView,
-    ResetPasswordView
+    ResetPasswordView,
+    VerifyOTPView
 )
 
 app_name = 'user'
@@ -38,6 +39,7 @@ urlpatterns = [
 
     # Forgot/Reset Password
     path('password/forgot/', ForgotPasswordView.as_view(), name='password-forgot'),
+    path('password/verify/', VerifyOTPView.as_view(), name='password-verify'),
     path('password/reset/', ResetPasswordView.as_view(), name='password-reset'),
 
     # JWT auth paths
