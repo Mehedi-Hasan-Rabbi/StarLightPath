@@ -55,7 +55,8 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     # Add local apps here
     "user",
-    "application"
+    "application",
+    "program",
 ]
 
 INSTALLED_APPS += THIRD_PARTY_APPS + LOCAL_APPS

@@ -29,8 +29,9 @@ urlpatterns = [
     # DRF auth paths
     path('api-auth/', include('rest_framework.urls')),
 
-    path('api/auth/', include('user.urls')),                            # User App
+    path('api/auth/', include('user.urls')),                           # User App
     path('api/application/', include('application.urls')),             # Application App
+    path('api/program/', include('program.urls')),                     # Program App
 
     # API documentation paths
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

@@ -11,6 +11,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Application
 from .serializers import ApplicationSerializer
 
+from .paginations import ApplicationPagination
+
 from user.permissions import IsSuperUser, IsAdminOrSuperUser
 
 logger = logging.getLogger(__name__)
@@ -118,6 +120,7 @@ class ApplicationListView(generics.ListAPIView):
     """
     queryset = Application.objects.all().order_by("-created_at")
     serializer_class = ApplicationSerializer
+    pagination_class = ApplicationPagination
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
 
 
