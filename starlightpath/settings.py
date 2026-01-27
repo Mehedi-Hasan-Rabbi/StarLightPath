@@ -21,17 +21,41 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env file
 load_dotenv(BASE_DIR / '.env')
 
+# ---------------------------
+# Helper parsers for env vars
+# ---------------------------
+def env_bool(val, default=False):
+    if val is None:
+        return default
+    return str(val).lower() in ("true", "1", "yes", "y", "on")
+
+
+def env_int(val, default=0):
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return default
+
+
+def env_list(val, default=None, sep=","):
+    if val is None or val == "":
+        return default or []
+    return [v.strip() for v in str(val).split(sep) if v.strip()]
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-+rsfa4=&b4rhcpg_ati9icqot!d#0in#%z8c10tl=t(3lgp*b0'
+SECRET_KEY = os.getenv(
+    "SECRET_KEY",
+    "django-insecure-+rsfa4=&b4rhcpg_ati9icqot!d#0in#%z8c10tl=t(3lgp*b0"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool(os.getenv("DEBUG"), default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env_list(os.getenv("ALLOWED_HOSTS"), default=["127.0.0.1", "localhost"])
 
 
 # Application definition
@@ -94,12 +118,40 @@ WSGI_APPLICATION = 'starlightpath.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database
+# You can configure DB via environment variables. Defaults to SQLite.
+# Supported environment variables:
+#   DB_ENGINE (default: django.db.backends.sqlite3)
+#   DB_NAME (path for sqlite or name for other DBs)
+#   DB_USER
+#   DB_PASSWORD
+#   DB_HOST
+#   DB_PORT
+DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.sqlite3")
+DB_NAME = os.getenv("DB_NAME", str(BASE_DIR / "db.sqlite3"))
+DB_USER = os.getenv("DB_USER", "")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_HOST = os.getenv("DB_HOST", "")
+DB_PORT = os.getenv("DB_PORT", "")
+
+if DB_ENGINE == "django.db.backends.sqlite3":
+    DATABASES = {
+        "default": {
+            "ENGINE": DB_ENGINE,
+            "NAME": DB_NAME,
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": DB_ENGINE,
+            "NAME": DB_NAME,
+            "USER": DB_USER,
+            "PASSWORD": DB_PASSWORD,
+            "HOST": DB_HOST,
+            "PORT": DB_PORT,
+        }
+    }
 
 
 # Password validation
@@ -136,14 +188,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = os.getenv("STATIC_URL", "static/")
+
+MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media")))
 
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
-
-
-AUTH_USER_MODEL = 'user.Users'
+AUTH_USER_MODEL = os.getenv("AUTH_USER_MODEL", "user.Users")
 
 
 REST_FRAMEWORK = {
@@ -157,27 +208,28 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=env_int(os.getenv("SIMPLE_JWT_ACCESS_TOKEN_HOURS"), 1)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=env_int(os.getenv("SIMPLE_JWT_REFRESH_TOKEN_DAYS"), 7)),
+    'ROTATE_REFRESH_TOKENS': env_bool(os.getenv("SIMPLE_JWT_ROTATE_REFRESH_TOKENS"), True),
+    'BLACKLIST_AFTER_ROTATION': env_bool(os.getenv("SIMPLE_JWT_BLACKLIST_AFTER_ROTATION"), True),
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Star Light Path API',
-    'DESCRIPTION': 'API documentation for Star Light Path project',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
+    'TITLE': os.getenv("SPECTACULAR_TITLE", 'Star Light Path API'),
+    'DESCRIPTION': os.getenv("SPECTACULAR_DESCRIPTION", 'API documentation for Star Light Path project'),
+    'VERSION': os.getenv("SPECTACULAR_VERSION", '1.0.0'),
+    'SERVE_INCLUDE_SCHEMA': env_bool(os.getenv("SPECTACULAR_SERVE_INCLUDE_SCHEMA"), False),
 }
 
 # Redis cache (use django-redis)
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1")
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",  # adjust host/port/db for your env
+        "LOCATION": REDIS_URL,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            # "PASSWORD": "your_redis_password",  # if needed
+            # "PASSWORD": os.getenv("REDIS_PASSWORD", ""),  # if needed
         }
     }
 }
@@ -186,19 +238,19 @@ CACHES = {
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # For production set SMTP settings instead
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+EMAIL_PORT = env_int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = env_bool(os.getenv('EMAIL_USE_TLS'), True)
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
 # OTP settings
-PASSWORD_RESET_OTP_TTL = 10 * 60                            # (Time-To-Live) OTP is valid for 10 minutes
-PASSWORD_RESET_OTP_LENGTH = 5                               # OTP Length
-PASSWORD_RESET_MAX_REQUESTS_PER_HOUR = 5                    # Max OTP requests per user per hour
-PASSWORD_RESET_MAX_VERIFY_ATTEMPTS = 5                      # User can try verifying OTP only 5 times
-PASSWORD_RESET_RESEND_COOLDOWN = 60                         # User must wait 60 seconds before requesting another OTP.
-PASSWORD_RESET_VERIFIED_TTL = 10 * 60                       # After OTP is successfully verified, user has: 10 minutes to reset password
-PASSWORD_RESET_OTP_PEPPER = "PASSWORD_RESET_OTP_PEPPER"     # A secret server-side value added to OTP before hashing.
+PASSWORD_RESET_OTP_TTL = env_int(os.getenv("PASSWORD_RESET_OTP_TTL"), 10 * 60)                                          # (Time-To-Live) OTP is valid for 10 minutes
+PASSWORD_RESET_OTP_LENGTH = env_int(os.getenv("PASSWORD_RESET_OTP_LENGTH"), 5)                                          # OTP Length
+PASSWORD_RESET_MAX_REQUESTS_PER_HOUR = env_int(os.getenv("PASSWORD_RESET_MAX_REQUESTS_PER_HOUR"), 5)                    # Max OTP requests per user per hour
+PASSWORD_RESET_MAX_VERIFY_ATTEMPTS = env_int(os.getenv("PASSWORD_RESET_MAX_VERIFY_ATTEMPTS"), 5)                        # User can try verifying OTP only 5 times
+PASSWORD_RESET_RESEND_COOLDOWN = env_int(os.getenv("PASSWORD_RESET_RESEND_COOLDOWN"), 60)                               # User must wait 60 seconds before requesting another OTP.
+PASSWORD_RESET_VERIFIED_TTL = env_int(os.getenv("PASSWORD_RESET_VERIFIED_TTL"), 10 * 60)                                # After OTP is successfully verified, user has: 10 minutes to reset password
+PASSWORD_RESET_OTP_PEPPER = os.getenv("PASSWORD_RESET_OTP_PEPPER", "PASSWORD_RESET_OTP_PEPPER")                         # A secret server-side value added to OTP before hashing.
