@@ -48,24 +48,41 @@ class ApplicationCreateView(generics.CreateAPIView):
         ]
         summary_text = "\n".join(summary_lines)
 
-        # Try to build an absolute admin link to the object change page
-        admin_link = None
-        try:
-            # admin URL name: admin:<app_label>_<model_name>_change
-            # app_label is the Django app name (your app is "appliction")
-            admin_path = reverse('admin:appliction_application_change', args=(app.pk,))
-            admin_link = self.request.build_absolute_uri(admin_path)
-        except Exception:
-            # fallback: relative admin path
-            admin_link = f"/admin/appliction/application/{app.pk}/change/"
-
         subject = f"[New Application] {app.full_name}"
-        text_body = f"A new application has been submitted:\n\n{summary_text}\n\nAdmin link: {admin_link}"
-        html_body = (
-            f"<p>A new application has been submitted:</p>"
-            f"<pre style='white-space:pre-wrap'>{summary_text}</pre>"
-            # f"<p><a href='{admin_link}'>Open in admin</a></p>"
+
+        text_body = (
+            "New Application Submitted\n\n"
+            "A new application has been submitted.\n\n"
+            "Details:\n"
+            "-------------------------\n"
+            f"{summary_text}\n"
+            "-------------------------\n\n"
+            "Please log in to the admin panel to review and take action.\n\n"
+            "— Star Light Path System"
         )
+
+        html_body = f"""
+        <div style="font-family: Arial, Helvetica, sans-serif; color: #111; line-height: 1.6;">
+            <h2 style="margin-bottom: 8px;">New Application Submitted</h2>
+
+            <p style="margin-top: 0;">
+                A new application has been submitted. Details are below:
+            </p>
+
+            <div style="background: #f7f7f7; padding: 12px 16px; border-radius: 6px;">
+                <pre style="margin: 0; white-space: pre-wrap; font-family: inherit;">{summary_text}</pre>
+            </div>
+
+            <p style="margin-top: 16px; font-size: 14px; color: #555;">
+                Please log in to the admin panel to review and take action.
+            </p>
+
+            <p style="font-size: 13px; color: #888;">
+                — Star Light Path System
+            </p>
+        </div>
+        """
+
 
         # Collect superuser emails
         superuser_qs = User.objects.filter(is_active=True, is_superuser=True).exclude(email__isnull=True).exclude(email__exact="")
