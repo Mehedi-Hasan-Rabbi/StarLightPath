@@ -74,6 +74,7 @@ THIRD_PARTY_APPS = [
     'rest_framework',                                   # Django Rest Framework
     'drf_spectacular',                                  # DRF Documentation
     'rest_framework_simplejwt.token_blacklist',         # For logout functionality
+    'corsheaders',                                      # For handling CORS
 ]
 
 LOCAL_APPS = [
@@ -88,11 +89,13 @@ INSTALLED_APPS += THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'starlightpath.urls'
@@ -188,7 +191,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = os.getenv("STATIC_URL", "static/")
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "staticfiles"]
 
 MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
 MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media")))
@@ -196,6 +200,15 @@ MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media")))
 
 AUTH_USER_MODEL = os.getenv("AUTH_USER_MODEL", "user.Users")
 
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOWED_ORIGINS = env_list(
+    os.getenv("CORS_ALLOWED_ORIGINS"),
+    default=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+)
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
