@@ -48,7 +48,6 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, full_name, password, **extra_fields)
 
 
-# Custom User Model
 class Users(AbstractBaseUser, PermissionsMixin):
     """
     Custom User model where email is used for authentication
@@ -127,4 +126,3 @@ class Users(AbstractBaseUser, PermissionsMixin):
     
     def __str__(self):
         return self.email
-    

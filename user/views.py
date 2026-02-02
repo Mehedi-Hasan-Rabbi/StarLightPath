@@ -1,27 +1,27 @@
-from datetime import timedelta, date
-from django.db.models import Count
-from django.utils import timezone
-from django.db.models.functions import TruncMonth
+import logging
 from calendar import month_name
-from rest_framework import status, generics
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError
-from django.contrib.auth import authenticate, get_user_model
+from datetime import timedelta, date
+
 from django.conf import settings
+from django.utils import timezone
+from django.db.models import Count
 from django.core.cache import cache
 from django.http import HttpResponse
-from rest_framework.permissions import AllowAny
-
-import logging
-
+from django.db.models.functions import TruncMonth
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.contrib.auth import authenticate, get_user_model
+
+from rest_framework.views import APIView
+from rest_framework import status, generics
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, AllowAny
+
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
 from application.models import Application
-from .permissions import IsAdminOrSuperUser
+from .permissions import IsAdminOrSuperUser, IsSuperUser
 
 from .serializers import (
     UserSerializer,
@@ -35,13 +35,13 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     VerifyOTPSerializer
 )
+
 from .utils import (
     generate_numeric_otp, can_request_otp, store_otp_for_email,
     send_otp_email, verify_otp, increment_verify_attempts,
     clear_otp_for_email, _otp_reqcount_key, _otp_attempts_key,
     set_verified_for_email, is_verified_for_email, clear_verified_for_email
 )
-from .permissions import IsSuperUser, IsAdminOrSuperUser
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -73,7 +73,6 @@ def _delete_refresh_cookie(response: HttpResponse):
     cookie_path = settings.SIMPLE_JWT.get('REFRESH_COOKIE_PATH', '/')
     response.delete_cookie(cookie_name, path=cookie_path)
 
-
 def _set_access_cookie(response: HttpResponse, access_token: str):
     cookie_name = getattr(settings, "ACCESS_COOKIE_NAME", "access_token")
     cookie_path = getattr(settings, "ACCESS_COOKIE_PATH", "/")
@@ -100,7 +99,22 @@ def _delete_access_cookie(response: HttpResponse):
     cookie_path = getattr(settings, "ACCESS_COOKIE_PATH", "/")
     response.delete_cookie(cookie_name, path=cookie_path)
 
+def _get_last_n_months(n, end_date=None):
+    end = end_date or timezone.now().date()
+    year = end.year
+    month = end.month
+    months = []
+    # produce months oldest -> newest
+    for i in range(n - 1, -1, -1):
+        m = month - i
+        y = year
+        while m <= 0:
+            m += 12
+            y -= 1
+        months.append((y, m))
+    return months
 
+# Custom views
 class LoginView(APIView):
     """
     API endpoint for user login.
@@ -584,8 +598,6 @@ class ResetPasswordView(APIView):
                         status=status.HTTP_200_OK)
 
 
-
-# Dashboard summary view
 class DashboardSummaryView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
 
@@ -607,24 +619,6 @@ class DashboardSummaryView(APIView):
         })
 
 
-# Helper: build list of (year, month) tuples for the last N months (oldest -> newest)
-def _get_last_n_months(n, end_date=None):
-    end = end_date or timezone.now().date()
-    year = end.year
-    month = end.month
-    months = []
-    # produce months oldest -> newest
-    for i in range(n - 1, -1, -1):
-        m = month - i
-        y = year
-        while m <= 0:
-            m += 12
-            y -= 1
-        months.append((y, m))
-    return months
-
-
-# Monthly applications series for bar chart
 class DashboardMonthlyApplicationsView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
 
