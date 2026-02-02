@@ -170,23 +170,29 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+LANGUAGE_CODE = os.getenv('LANGUAGE_CODE', 'en-us')
+TIME_ZONE = os.getenv('TIME_ZONE', 'UTC')
 USE_I18N = True
-
 USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = "/static/"
+STATIC_URL = os.getenv("STATIC_URL", "/static/")
 STATICFILES_DIRS = [BASE_DIR / "staticfiles"]
 
 MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
 MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media")))
+
+# Security settings
+CSRF_COOKIE_SECURE = env_bool(os.getenv("CSRF_COOKIE_SECURE", True), True)                              # True in production (requires HTTPS)
+CSRF_COOKIE_SAMESITE = os.getenv("CSRF_COOKIE_SAMESITE", "Lax")                                         # 'Lax' is a good balance between security and usability or "None" if cross-site (then Secure=True required)
+SESSION_COOKIE_SECURE = env_bool(os.getenv("SESSION_COOKIE_SECURE", True), True)                        # True in production (requires HTTPS) 
+SECURE_SSL_REDIRECT = env_bool(os.getenv("SECURE_SSL_REDIRECT", False), False)
+SECURE_HSTS_SECONDS = env_int(os.getenv("SECURE_HSTS_SECONDS", 0))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", False), False)
+SECURE_HSTS_PRELOAD = env_bool(os.getenv("SECURE_HSTS_PRELOAD", False), False)
 
 
 AUTH_USER_MODEL = os.getenv("AUTH_USER_MODEL", "user.Users")
@@ -200,10 +206,6 @@ CORS_ALLOWED_ORIGINS = env_list(
         "http://127.0.0.1:3000",
     ]
 )
-
-CSRF_COOKIE_SECURE = True       # True in production (requires HTTPS)
-CSRF_COOKIE_SAMESITE = "Lax"    # or "None" if cross-site (then Secure=True required)
-SESSION_COOKIE_SECURE = True    # True in production (requires HTTPS)
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
