@@ -1,6 +1,5 @@
 from rest_framework import permissions
 
-
 class IsSuperUserOrAdminReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         user = getattr(request, "user", None)

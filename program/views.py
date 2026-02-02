@@ -1,12 +1,12 @@
-from rest_framework import viewsets, permissions, parsers
-from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
+from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from rest_framework import viewsets, permissions, parsers
 
+from . import serializers
 from .models import Program, ProgramSection
 from .permissions import IsSuperUserOrAdminReadOnly
-from . import serializers
 
 
 class ProgramViewSet(viewsets.ModelViewSet):
@@ -51,7 +51,7 @@ class ProgramSectionViewSet(viewsets.ModelViewSet):
         if self.request.method in permissions.SAFE_METHODS:
             return serializers.ProgramSectionReadSerializer
         return serializers.ProgramSectionWriteSerializer
-    
+
 
 class PublicProgramListView(generics.ListAPIView):
     """
