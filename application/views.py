@@ -1,22 +1,21 @@
-from django.urls import reverse
+import logging
+
 from django.conf import settings
 from django.core.mail import send_mail
-from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
-import logging
 
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .models import Application
 from .serializers import ApplicationSerializer
-
 from .paginations import ApplicationPagination
 
-from user.permissions import IsSuperUser, IsAdminOrSuperUser
+from user.permissions import IsAdminOrSuperUser
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
 
 class ApplicationCreateView(generics.CreateAPIView):
     """
@@ -131,3 +130,4 @@ class ApplicationDetailView(generics.RetrieveAPIView):
     queryset = Application.objects.all()
     serializer_class = ApplicationSerializer
     permission_classes = [IsAuthenticated, IsAdminOrSuperUser]
+    

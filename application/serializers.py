@@ -1,5 +1,5 @@
-from rest_framework import serializers
 from .models import Application
+from rest_framework import serializers
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
@@ -82,3 +82,4 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)
+    
