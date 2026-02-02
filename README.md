@@ -206,12 +206,8 @@ Contributing
 
 If you plan to contribute, please add a short PR description and link any issue it resolves.
 
-License & contact
+Contact
 -----------------
-- No LICENSE file detected in the repository. If you want others to use or contribute to this project, add a license (for example: MIT, Apache-2.0).
 - Repo: https://github.com/Mehedi-Hasan-Rabbi/StarLightPath
 - Maintainer: Mehedi-Hasan-Rabbi
 
-Additional notes
-----------------
-- I inspected `manage.py`, `starlightpath/settings.py`, `starlightpath/urls.py`, `requirements.txt`, and `.env.example` to build this README. There may be more app-specific details inside `user`, `application`, and `program` application folders that you should document (models, serializers, API endpoints). Start the server and visit `/api/doc/` or `/api/schema/` for the most accurate, auto-generated API docs for your current codebase.
