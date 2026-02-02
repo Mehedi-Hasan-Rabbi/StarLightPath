@@ -121,15 +121,6 @@ WSGI_APPLICATION = 'starlightpath.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# Database
-# You can configure DB via environment variables. Defaults to SQLite.
-# Supported environment variables:
-#   DB_ENGINE (default: django.db.backends.sqlite3)
-#   DB_NAME (path for sqlite or name for other DBs)
-#   DB_USER
-#   DB_PASSWORD
-#   DB_HOST
-#   DB_PORT
 DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.sqlite3")
 DB_NAME = os.getenv("DB_NAME", str(BASE_DIR / "db.sqlite3"))
 DB_USER = os.getenv("DB_USER", "")
